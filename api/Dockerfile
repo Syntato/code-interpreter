@@ -63,6 +63,15 @@ COPY docker/package-init.sh /package-init.sh
 COPY javascript-packages.txt /javascript-packages.txt
 RUN chmod +x /package-init.sh && FORCE_REBUILD=true /package-init.sh
 
+# Syntato local addition: biopython isn't in package-init.sh's baked list
+# upstream, and the sandbox has no network egress to pip install it at
+# runtime (SANDBOX_DISABLE_NETWORKING=true), so it has to be baked in here.
+# Kept as its own layer rather than editing package-init.sh's array, so this
+# stays a small, isolated diff instead of a merge-conflict-prone change deep
+# in someone else's package list. Version pinned to match what the
+# biopython skill (lab-agent-skills) documents itself as targeting.
+RUN /pkgs/python/${PYTHON_VERSION}/bin/pip3 install biopython==1.87
+
 # ============================================================================
 # Stage 2: Build sandbox rootfs
 # ============================================================================
