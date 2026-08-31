@@ -77,6 +77,32 @@ those need live internet access at request time, and no amount of baking
 in fixes that without actually enabling sandbox networking, which is a much
 bigger decision (see below).
 
+## 3. `api/Dockerfile` — pydna baked into the sandbox
+
+Same reasoning as biopython above, for a skill covering molecular cloning
+design (restriction digestion/ligation simulation, Type IIS-flanked
+construct design) rather than sequence analysis. pydna's own dependency
+list already includes `biopython` (baked in above) plus `networkx`,
+`numpy`, `appdirs`, `prettytable`, and a few smaller pure-Python packages —
+all local computation, nothing that needs live network access for the
+digestion/ligation/assembly-simulation functionality actually used here.
+
+Notably, pydna also depends on `opencloning-linkml` — the two projects
+(pydna, OpenCloning) share a data model; OpenCloning's own automation is
+built on pydna as its simulation engine, not a separate implementation.
+Building on pydna locally gets the same simulation fidelity without
+needing OpenCloning's hosted service or its network dependency.
+
+License checked before adding: `LICENSE.txt` in the pydna repo is a
+BSD-3-Clause-style permissive license (GitHub's own detector just doesn't
+recognize it as a template match, since the org/copyright names are
+substituted into the license text itself) — properly licensed, unlike a
+previously-considered alternative for BLAST tooling that was rejected
+specifically for having no LICENSE file at all.
+
+Pinned to `pydna==5.5.16` (the latest release at the time) to match what
+the skill's own `SKILL.md` documents itself as targeting.
+
 ## Considered and rejected: `SANDBOX_DISABLE_NETWORKING=false`
 
 Real flag, actually exists (`api/src/config.ts`) — worth recording that it

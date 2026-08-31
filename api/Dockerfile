@@ -72,6 +72,15 @@ RUN chmod +x /package-init.sh && FORCE_REBUILD=true /package-init.sh
 # biopython skill (lab-agent-skills) documents itself as targeting.
 RUN /pkgs/python/${PYTHON_VERSION}/bin/pip3 install biopython==1.87
 
+# Same reasoning as biopython above: pydna (molecular cloning simulation —
+# restriction digestion/ligation, Type IIS-flanked construct design) needs
+# to be baked in at build time for the same no-runtime-network reason.
+# Version pinned to match what its own skill (lab-agent-skills) targets.
+# pydna's core dependencies (biopython, networkx, numpy, ...) are all local
+# computation, no runtime network needed for the digestion/ligation
+# simulation this sandbox actually uses.
+RUN /pkgs/python/${PYTHON_VERSION}/bin/pip3 install pydna==5.5.16
+
 # ============================================================================
 # Stage 2: Build sandbox rootfs
 # ============================================================================
