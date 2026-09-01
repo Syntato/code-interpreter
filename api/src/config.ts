@@ -104,6 +104,10 @@ export const config = {
   prime_concurrency: safeInt(process.env.SANDBOX_PRIME_CONCURRENCY, 8),
   egress_gateway_url: egressGatewayUrl,
   file_server_url: process.env.FILE_SERVER_URL ?? '',
+  /* Syntato addition — see SYNTATO_CHANGES.md. Empty by default: the
+   * forward-qualifying-output-files-to-preview-server step in
+   * uploadOneFile() is a no-op unless this is explicitly set. */
+  preview_server_url: process.env.PREVIEW_SERVER_URL ?? '',
   max_nesting_depth: safeInt(process.env.SANDBOX_MAX_NESTING_DEPTH, 10),
   max_path_length: safeInt(process.env.SANDBOX_MAX_PATH_LENGTH, 256),
   max_output_files: safeInt(process.env.SANDBOX_MAX_OUTPUT_FILES, 50),

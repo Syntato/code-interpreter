@@ -53,6 +53,11 @@ resolve_host_port() {
 
 resolve_url EGRESS_GATEWAY_URL
 resolve_url FILE_SERVER_URL
+# Syntato addition — see SYNTATO_CHANGES.md. Same reason as FILE_SERVER_URL
+# above: TSI can't do the guest's own DNS, so this has to be resolved to a
+# literal IP here, in the container's own network namespace, before the
+# guest boots.
+resolve_url PREVIEW_SERVER_URL
 resolve_host_port SANDBOX_FORWARD_TARGET
 
 if [ "${LAUNCHER_FILTER_VSOCK_ENOTCONN:-true}" = "true" ]; then

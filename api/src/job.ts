@@ -555,7 +555,18 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.helmignore', '.helmfile', '.jenkinsfile', '.vagrantfile',
   '.eslintrc', '.prettierrc', '.editorconfig', '.nomad',
   '.bat', '.cmd', '.deb', '.log', '.rpm', '.vbs',
+  '.fasta', '.fa',
 ]);
+
+/* Syntato addition — see SYNTATO_CHANGES.md. Maps an output extension to
+ * the preview-server "kind" route it should forward to
+ * (`{PREVIEW_SERVER_URL}/ingest/{kind}`) — a map, not a single hardcoded
+ * kind, so a future format (once preview-server supports rendering it)
+ * is a one-line addition here rather than a new code path. */
+const PREVIEW_FORWARD_KINDS: Record<string, string> = {
+  '.fasta': 'fasta',
+  '.fa': 'fasta',
+};
 
 function isSupportedOutputFilename(name: string): boolean {
   const basename = path.basename(name);
@@ -2266,6 +2277,10 @@ export class Job {
         throw new Error(`Upload HTTP error: ${response.status}`);
       }
       this.log.debug({ file: file.name, id: file.id, size }, 'Uploaded file');
+      /* Syntato addition — see SYNTATO_CHANGES.md. Best-effort: a
+       * preview-server hiccup must never fail the primary upload, which
+       * already succeeded above. */
+      await this.forwardToPreviewServer(file);
       return file.id;
     } catch (error) {
       this.log.error({ file: file.name, err: error }, 'Error uploading file');
@@ -2285,6 +2300,54 @@ export class Job {
            * either way the socket is released, so swallow the error. */
         });
       }
+    }
+  }
+
+  /**
+   * Syntato addition — see SYNTATO_CHANGES.md. Forwards a just-uploaded
+   * output file to lab-agent-preview-server when its extension is one
+   * preview-server knows how to render (`PREVIEW_FORWARD_KINDS`) and
+   * `PREVIEW_SERVER_URL` is configured (empty by default — a no-op
+   * otherwise). Exists so the agent can hand off a large or awkward-to-
+   * retype file by writing it via code execution instead of composing
+   * its content as an MCP tool-call argument — the failure mode that
+   * prompted this: for a large FASTA file, the model was observed giving
+   * up partway through a tool-call argument and reporting false success.
+   *
+   * Deliberately best-effort and silent on failure beyond a log line —
+   * this runs after the real upload (to file_server) already succeeded,
+   * so a preview-server hiccup must never fail the job or the primary
+   * upload. Reads the whole file into memory rather than streaming it
+   * like the primary upload above: this only ever applies to the small,
+   * text-only extensions in PREVIEW_FORWARD_KINDS, not the general
+   * binary/large-file case the primary upload's streaming exists for.
+   */
+  private async forwardToPreviewServer(file: GeneratedFile): Promise<void> {
+    if (!config.preview_server_url) return;
+    const kind = PREVIEW_FORWARD_KINDS[path.extname(file.name).toLowerCase()];
+    if (!kind) return;
+
+    try {
+      const content = await fsp.readFile(file.path, 'utf8');
+      const response = await fetch(`${config.preview_server_url}/ingest/${kind}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'X-Title': path.basename(file.name),
+        },
+        body: content,
+      });
+      if (!response.ok) {
+        this.log.warn(
+          { file: file.name, status: response.status },
+          'preview-server rejected forwarded file',
+        );
+      }
+      if (response.body && !response.bodyUsed) {
+        await response.body.cancel().catch(() => {});
+      }
+    } catch (error) {
+      this.log.warn({ file: file.name, err: error }, 'Failed to forward file to preview-server');
     }
   }
 

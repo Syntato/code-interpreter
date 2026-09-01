@@ -51,6 +51,12 @@ services:
       - CODEAPI_INTERNAL_SERVICE_TOKEN=${CODEAPI_INTERNAL_SERVICE_TOKEN:-}
       - SANDBOX_ALLOWED_LOCAL_NETWORK_PORT=3033
       - SANDBOX_FORWARD_TARGET=tool_call_server:3033
+      # Syntato addition — see SYNTATO_CHANGES.md. lab-agent-preview-server
+      # runs directly on the host (systemd, port 8012), not in this compose
+      # network — host.docker.internal is how a container reaches it, same
+      # address librechat.yaml's own preview-server MCP entry already uses.
+      # Empty/unset makes job.ts's forward-to-preview-server step a no-op.
+      - PREVIEW_SERVER_URL=http://host.docker.internal:8012
     healthcheck:
       test: ["CMD", "/usr/local/bin/sandbox-runner-healthcheck.sh"]
       interval: 10s
@@ -58,6 +64,13 @@ services:
       retries: 6
     depends_on:
       - tool_call_server
+    # Syntato addition — see SYNTATO_CHANGES.md. Required for the
+    # PREVIEW_SERVER_URL host.docker.internal address above to resolve at
+    # all: unlike Docker Desktop, plain Linux Docker does not add this
+    # mapping automatically. Matches the equivalent entry already needed
+    # (and present) in lab-agent/docker-compose.yml for the same reason.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # File Server (MinIO integration) - Stateless, scales independently
   file_server:

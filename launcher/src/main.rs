@@ -449,7 +449,10 @@ fn is_allowed_guest_env_key(key: &str, egress_gateway_enabled: bool) -> bool {
     ];
     // Non-gateway deployments still rely on FILE_SERVER_URL for sandbox file IO.
     // Hardened egress mode keeps blocking it so sandbox traffic goes only to the gateway.
-    const LEGACY_NON_EGRESS_EXACT: &[&str] = &["FILE_SERVER_URL"];
+    // Syntato addition — see SYNTATO_CHANGES.md: PREVIEW_SERVER_URL is the same
+    // shape of thing (a URL job.ts's own orchestrator process calls out to,
+    // not something exposed to user-submitted code), so it's gated the same way.
+    const LEGACY_NON_EGRESS_EXACT: &[&str] = &["FILE_SERVER_URL", "PREVIEW_SERVER_URL"];
     const DENY_PREFIXES: &[&str] = &[
         "AWS_",
         "CODEAPI_",
